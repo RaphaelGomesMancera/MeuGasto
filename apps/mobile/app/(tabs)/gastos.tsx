@@ -1,21 +1,36 @@
 import React, { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { getExpenses, ExpenseItem } from "../../storage/expense-storage";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  deleteExpense,
+  ExpenseItem,
+  getExpenses,
+} from "../../storage/expense-storage";
 
 export default function GastosScreen() {
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
 
+  const loadExpenses = useCallback(async () => {
+    const data = await getExpenses();
+    setExpenses(data);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
-      async function loadExpenses() {
-        const data = await getExpenses();
-        setExpenses(data);
-      }
-
       loadExpenses();
-    }, [])
+    }, [loadExpenses])
   );
+
+  async function handleDeleteExpense(expenseId: string) {
+    const confirmed = window.confirm("Tem certeza que deseja excluir este gasto?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    await deleteExpense(expenseId);
+    await loadExpenses();
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -41,6 +56,13 @@ export default function GastosScreen() {
             {expense.notes ? (
               <Text style={styles.cardNotes}>{expense.notes}</Text>
             ) : null}
+
+            <Pressable
+              style={styles.deleteButton}
+              onPress={() => handleDeleteExpense(expense.id)}
+            >
+              <Text style={styles.deleteButtonText}>Excluir</Text>
+            </Pressable>
           </View>
         ))
       )}
@@ -109,5 +131,18 @@ const styles = StyleSheet.create({
   cardNotes: {
     fontSize: 14,
     color: "#374151",
+  },
+  deleteButton: {
+    marginTop: 8,
+    alignSelf: "flex-start",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#dc2626",
+  },
+  deleteButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

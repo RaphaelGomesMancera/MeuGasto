@@ -1,6 +1,6 @@
 import { View, Text } from "react-native";
 
-export default function DashboardScreen() {
+export default function NovoGastoScreen() {
   return (
     <View
       style={{
@@ -12,10 +12,10 @@ export default function DashboardScreen() {
       }}
     >
       <Text style={{ fontSize: 28, fontWeight: "700", color: "#111827" }}>
-        Dashboard
+        Novo Gasto
       </Text>
       <Text style={{ fontSize: 16, color: "#6b7280", marginTop: 8 }}>
-        Resumo dos seus gastos
+        Aqui ficará o formulário
       </Text>
     </View>
   );

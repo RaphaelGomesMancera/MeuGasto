@@ -13,6 +13,7 @@ import {
   getExpenseById,
   updateExpense,
 } from "../../storage/expense-storage";
+import { isValidDate } from "../../utils/date";
 
 const categories = [
   "Alimentação",
@@ -75,6 +76,11 @@ export default function EditarGastoScreen() {
 
     if (!date.trim()) {
       Alert.alert("Campo obrigatório", "Informe a data do gasto.");
+      return;
+    }
+
+    if (!isValidDate(date.trim())) {
+      Alert.alert("Data inválida", "Informe uma data válida no formato DD/MM/AAAA.");
       return;
     }
 

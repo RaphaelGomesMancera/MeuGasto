@@ -1,72 +1,143 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
-  deleteExpense,
-  ExpenseItem,
-  getExpenses,
-} from "../../storage/expense-storage";
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { ExpenseItem, getExpenses } from "../../storage/expense-storage";
+import { extractMonthYear, getAvailableMonthYears } from "../../utils/date";
 
-export default function GastosScreen() {
+export default function DashboardScreen() {
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-
-  const loadExpenses = useCallback(async () => {
-    const data = await getExpenses();
-    setExpenses(data);
-  }, []);
+  const [selectedMonthYear, setSelectedMonthYear] = useState("");
 
   useFocusEffect(
     useCallback(() => {
+      async function loadExpenses() {
+        const data = await getExpenses();
+        setExpenses(data);
+
+        if (data.length > 0) {
+          const availableMonths = getAvailableMonthYears(data.map((item) => item.date));
+
+          if (availableMonths.length > 0) {
+            setSelectedMonthYear((current) => current || availableMonths[0]);
+          }
+        }
+      }
+
       loadExpenses();
-    }, [loadExpenses])
+    }, [])
   );
 
-  async function handleDeleteExpense(expenseId: string) {
-    const confirmed = window.confirm("Tem certeza que deseja excluir este gasto?");
+  const availableMonths = useMemo(() => {
+    return getAvailableMonthYears(expenses.map((expense) => expense.date));
+  }, [expenses]);
 
-    if (!confirmed) {
-      return;
+  const filteredExpenses = useMemo(() => {
+    if (!selectedMonthYear) return expenses;
+
+    return expenses.filter(
+      (expense) => extractMonthYear(expense.date) === selectedMonthYear
+    );
+  }, [expenses, selectedMonthYear]);
+
+  const totalSpent = useMemo(() => {
+    return filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  }, [filteredExpenses]);
+
+  const totalCount = filteredExpenses.length;
+  const lastExpense = filteredExpenses[0] ?? null;
+
+  const mostUsedCategory = useMemo(() => {
+    if (filteredExpenses.length === 0) return "Nenhuma";
+
+    const categoryMap: Record<string, number> = {};
+
+    for (const expense of filteredExpenses) {
+      categoryMap[expense.category] = (categoryMap[expense.category] || 0) + 1;
     }
 
-    await deleteExpense(expenseId);
-    await loadExpenses();
-  }
+    const sortedCategories = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]);
+
+    return sortedCategories[0][0];
+  }, [filteredExpenses]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Gastos</Text>
-      <Text style={styles.subtitle}>Lista dos gastos cadastrados</Text>
+      <Text style={styles.title}>Dashboard</Text>
+      <Text style={styles.subtitle}>Resumo dos seus gastos</Text>
 
-      {expenses.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>Nenhum gasto cadastrado ainda.</Text>
+      <View style={styles.filterContainer}>
+        <Text style={styles.filterLabel}>Mês selecionado</Text>
+
+        <View style={styles.monthButtonsContainer}>
+          {availableMonths.length === 0 ? (
+            <Text style={styles.emptyFilterText}>Nenhum mês disponível</Text>
+          ) : (
+            availableMonths.map((month) => {
+              const isSelected = selectedMonthYear === month;
+
+              return (
+                <Pressable
+                  key={month}
+                  style={[
+                    styles.monthButton,
+                    isSelected && styles.monthButtonSelected,
+                  ]}
+                  onPress={() => setSelectedMonthYear(month)}
+                >
+                  <Text
+                    style={[
+                      styles.monthButtonText,
+                      isSelected && styles.monthButtonTextSelected,
+                    ]}
+                  >
+                    {month}
+                  </Text>
+                </Pressable>
+              );
+            })
+          )}
         </View>
-      ) : (
-        expenses.map((expense) => (
-          <View key={expense.id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>{expense.title}</Text>
-              <Text style={styles.cardAmount}>
-                R$ {expense.amount.toFixed(2).replace(".", ",")}
+      </View>
+
+      <View style={styles.cardsContainer}>
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>Total gasto</Text>
+          <Text style={styles.cardValue}>
+            R$ {totalSpent.toFixed(2).replace(".", ",")}
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>Quantidade</Text>
+          <Text style={styles.cardValue}>{totalCount}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>Categoria mais usada</Text>
+          <Text style={styles.cardValueSmall}>{mostUsedCategory}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>Último lançamento</Text>
+          {lastExpense ? (
+            <>
+              <Text style={styles.cardValueSmall}>{lastExpense.title}</Text>
+              <Text style={styles.cardSubValue}>
+                R$ {lastExpense.amount.toFixed(2).replace(".", ",")}
               </Text>
-            </View>
-
-            <Text style={styles.cardCategory}>{expense.category}</Text>
-            <Text style={styles.cardDate}>Data: {expense.date}</Text>
-
-            {expense.notes ? (
-              <Text style={styles.cardNotes}>{expense.notes}</Text>
-            ) : null}
-
-            <Pressable
-              style={styles.deleteButton}
-              onPress={() => handleDeleteExpense(expense.id)}
-            >
-              <Text style={styles.deleteButtonText}>Excluir</Text>
-            </Pressable>
-          </View>
-        ))
-      )}
+              <Text style={styles.cardSubValue}>Data: {lastExpense.date}</Text>
+            </>
+          ) : (
+            <Text style={styles.cardValueSmall}>Nenhum gasto</Text>
+          )}
+        </View>
+      </View>
     </ScrollView>
   );
 }
@@ -91,63 +162,71 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     marginBottom: 8,
   },
-  emptyState: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
+  filterContainer: {
+    gap: 10,
   },
-  emptyStateText: {
+  filterLabel: {
     fontSize: 15,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  monthButtonsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  monthButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+  },
+  monthButtonSelected: {
+    backgroundColor: "#111827",
+    borderColor: "#111827",
+  },
+  monthButtonText: {
+    color: "#111827",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  monthButtonTextSelected: {
+    color: "#ffffff",
+  },
+  emptyFilterText: {
+    fontSize: 14,
     color: "#6b7280",
+  },
+  cardsContainer: {
+    gap: 14,
   },
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 14,
+    padding: 18,
     borderWidth: 1,
     borderColor: "#e5e7eb",
     gap: 8,
   },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  cardLabel: {
+    fontSize: 14,
+    color: "#6b7280",
+    fontWeight: "600",
   },
-  cardTitle: {
-    fontSize: 16,
+  cardValue: {
+    fontSize: 28,
     fontWeight: "700",
     color: "#111827",
   },
-  cardAmount: {
-    fontSize: 16,
+  cardValueSmall: {
+    fontSize: 20,
     fontWeight: "700",
     color: "#111827",
   },
-  cardCategory: {
-    fontSize: 14,
+  cardSubValue: {
+    fontSize: 15,
     color: "#6b7280",
-  },
-  cardDate: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-  cardNotes: {
-    fontSize: 14,
-    color: "#374151",
-  },
-  deleteButton: {
-    marginTop: 8,
-    alignSelf: "flex-start",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: "#dc2626",
-  },
-  deleteButtonText: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "700",
   },
 });

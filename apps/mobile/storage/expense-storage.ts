@@ -22,9 +22,27 @@ export async function getExpenses() {
   return JSON.parse(storedExpenses) as ExpenseItem[];
 }
 
+export async function getExpenseById(expenseId: string) {
+  const expenses = await getExpenses();
+  return expenses.find((expense) => expense.id === expenseId) ?? null;
+}
+
 export async function saveExpense(expense: ExpenseItem) {
   const currentExpenses = await getExpenses();
   const updatedExpenses = [expense, ...currentExpenses];
+
+  await AsyncStorage.setItem(
+    EXPENSES_STORAGE_KEY,
+    JSON.stringify(updatedExpenses)
+  );
+}
+
+export async function updateExpense(updatedExpense: ExpenseItem) {
+  const currentExpenses = await getExpenses();
+
+  const updatedExpenses = currentExpenses.map((expense) =>
+    expense.id === updatedExpense.id ? updatedExpense : expense
+  );
 
   await AsyncStorage.setItem(
     EXPENSES_STORAGE_KEY,

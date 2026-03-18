@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
   Pressable,
   ScrollView,
@@ -15,6 +15,8 @@ import {
 import { extractMonthYear, getAvailableMonthYears } from "../../utils/date";
 
 export default function GastosScreen() {
+  const router = useRouter();
+
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [selectedMonthYear, setSelectedMonthYear] = useState("");
 
@@ -23,11 +25,15 @@ export default function GastosScreen() {
     setExpenses(data);
 
     if (data.length > 0) {
-      const availableMonths = getAvailableMonthYears(data.map((item) => item.date));
+      const availableMonths = getAvailableMonthYears(
+        data.map((item) => item.date)
+      );
 
       if (availableMonths.length > 0) {
         setSelectedMonthYear((current) => current || availableMonths[0]);
       }
+    } else {
+      setSelectedMonthYear("");
     }
   }, []);
 
@@ -50,7 +56,9 @@ export default function GastosScreen() {
   }, [expenses, selectedMonthYear]);
 
   async function handleDeleteExpense(expenseId: string) {
-    const confirmed = window.confirm("Tem certeza que deseja excluir este gasto?");
+    const confirmed = window.confirm(
+      "Tem certeza que deseja excluir este gasto?"
+    );
 
     if (!confirmed) {
       return;
@@ -58,6 +66,13 @@ export default function GastosScreen() {
 
     await deleteExpense(expenseId);
     await loadExpenses();
+  }
+
+  function handleEditExpense(expenseId: string) {
+    router.push({
+      pathname: "/editar/[id]",
+      params: { id: expenseId },
+    });
   }
 
   return (
@@ -122,12 +137,21 @@ export default function GastosScreen() {
               <Text style={styles.cardNotes}>{expense.notes}</Text>
             ) : null}
 
-            <Pressable
-              style={styles.deleteButton}
-              onPress={() => handleDeleteExpense(expense.id)}
-            >
-              <Text style={styles.deleteButtonText}>Excluir</Text>
-            </Pressable>
+            <View style={styles.actionsContainer}>
+              <Pressable
+                style={styles.editButton}
+                onPress={() => handleEditExpense(expense.id)}
+              >
+                <Text style={styles.editButtonText}>Editar</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.deleteButton}
+                onPress={() => handleDeleteExpense(expense.id)}
+              >
+                <Text style={styles.deleteButtonText}>Excluir</Text>
+              </Pressable>
+            </View>
           </View>
         ))
       )}
@@ -238,9 +262,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#374151",
   },
-  deleteButton: {
+  actionsContainer: {
+    flexDirection: "row",
+    gap: 10,
     marginTop: 8,
-    alignSelf: "flex-start",
+  },
+  editButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#2563eb",
+  },
+  editButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  deleteButton: {
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,

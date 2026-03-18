@@ -8,6 +8,7 @@ export interface ExpenseItem {
   amount: number;
   category: string;
   notes: string;
+  date: string;
   createdAt: string;
 }
 

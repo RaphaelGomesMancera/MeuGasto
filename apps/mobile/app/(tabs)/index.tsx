@@ -1,81 +1,72 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { ExpenseItem, getExpenses } from "../../storage/expense-storage";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  deleteExpense,
+  ExpenseItem,
+  getExpenses,
+} from "../../storage/expense-storage";
 
-export default function DashboardScreen() {
+export default function GastosScreen() {
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
+
+  const loadExpenses = useCallback(async () => {
+    const data = await getExpenses();
+    setExpenses(data);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      async function loadExpenses() {
-        const data = await getExpenses();
-        setExpenses(data);
-      }
-
       loadExpenses();
-    }, [])
+    }, [loadExpenses])
   );
 
-  const totalSpent = useMemo(() => {
-    return expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  }, [expenses]);
+  async function handleDeleteExpense(expenseId: string) {
+    const confirmed = window.confirm("Tem certeza que deseja excluir este gasto?");
 
-  const totalCount = expenses.length;
-
-  const lastExpense = expenses[0] ?? null;
-
-  const mostUsedCategory = useMemo(() => {
-    if (expenses.length === 0) return "Nenhuma";
-
-    const categoryMap: Record<string, number> = {};
-
-    for (const expense of expenses) {
-      categoryMap[expense.category] = (categoryMap[expense.category] || 0) + 1;
+    if (!confirmed) {
+      return;
     }
 
-    const sortedCategories = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]);
-
-    return sortedCategories[0][0];
-  }, [expenses]);
+    await deleteExpense(expenseId);
+    await loadExpenses();
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Dashboard</Text>
-      <Text style={styles.subtitle}>Resumo dos seus gastos</Text>
+      <Text style={styles.title}>Gastos</Text>
+      <Text style={styles.subtitle}>Lista dos gastos cadastrados</Text>
 
-      <View style={styles.cardsContainer}>
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Total gasto</Text>
-          <Text style={styles.cardValue}>
-            R$ {totalSpent.toFixed(2).replace(".", ",")}
-          </Text>
+      {expenses.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateText}>Nenhum gasto cadastrado ainda.</Text>
         </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Quantidade</Text>
-          <Text style={styles.cardValue}>{totalCount}</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Categoria mais usada</Text>
-          <Text style={styles.cardValueSmall}>{mostUsedCategory}</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Último lançamento</Text>
-          {lastExpense ? (
-            <>
-              <Text style={styles.cardValueSmall}>{lastExpense.title}</Text>
-              <Text style={styles.cardSubValue}>
-                R$ {lastExpense.amount.toFixed(2).replace(".", ",")}
+      ) : (
+        expenses.map((expense) => (
+          <View key={expense.id} style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>{expense.title}</Text>
+              <Text style={styles.cardAmount}>
+                R$ {expense.amount.toFixed(2).replace(".", ",")}
               </Text>
-            </>
-          ) : (
-            <Text style={styles.cardValueSmall}>Nenhum gasto</Text>
-          )}
-        </View>
-      </View>
+            </View>
+
+            <Text style={styles.cardCategory}>{expense.category}</Text>
+            <Text style={styles.cardDate}>Data: {expense.date}</Text>
+
+            {expense.notes ? (
+              <Text style={styles.cardNotes}>{expense.notes}</Text>
+            ) : null}
+
+            <Pressable
+              style={styles.deleteButton}
+              onPress={() => handleDeleteExpense(expense.id)}
+            >
+              <Text style={styles.deleteButtonText}>Excluir</Text>
+            </Pressable>
+          </View>
+        ))
+      )}
     </ScrollView>
   );
 }
@@ -100,34 +91,63 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     marginBottom: 8,
   },
-  cardsContainer: {
-    gap: 14,
+  emptyState: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  emptyStateText: {
+    fontSize: 15,
+    color: "#6b7280",
   },
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: 14,
-    padding: 18,
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
     borderColor: "#e5e7eb",
     gap: 8,
   },
-  cardLabel: {
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  cardAmount: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  cardCategory: {
     fontSize: 14,
     color: "#6b7280",
-    fontWeight: "600",
   },
-  cardValue: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  cardValueSmall: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  cardSubValue: {
-    fontSize: 15,
+  cardDate: {
+    fontSize: 14,
     color: "#6b7280",
+  },
+  cardNotes: {
+    fontSize: 14,
+    color: "#374151",
+  },
+  deleteButton: {
+    marginTop: 8,
+    alignSelf: "flex-start",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#dc2626",
+  },
+  deleteButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

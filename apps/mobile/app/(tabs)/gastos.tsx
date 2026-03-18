@@ -52,6 +52,7 @@ export default function GastosScreen() {
             </View>
 
             <Text style={styles.cardCategory}>{expense.category}</Text>
+            <Text style={styles.cardDate}>Data: {expense.date}</Text>
 
             {expense.notes ? (
               <Text style={styles.cardNotes}>{expense.notes}</Text>
@@ -125,6 +126,10 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   cardCategory: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+  cardDate: {
     fontSize: 14,
     color: "#6b7280",
   },

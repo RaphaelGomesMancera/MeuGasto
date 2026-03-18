@@ -26,6 +26,7 @@ export default function NovoGastoScreen() {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Alimentação");
   const [notes, setNotes] = useState("");
+  const [date, setDate] = useState("");
 
   async function handleSaveExpense() {
     const numericAmount = Number(amount.replace(",", "."));
@@ -40,6 +41,11 @@ export default function NovoGastoScreen() {
       return;
     }
 
+    if (!date.trim()) {
+      Alert.alert("Campo obrigatório", "Informe a data do gasto.");
+      return;
+    }
+
     if (Number.isNaN(numericAmount) || numericAmount <= 0) {
       Alert.alert("Valor inválido", "Informe um valor maior que zero.");
       return;
@@ -51,6 +57,7 @@ export default function NovoGastoScreen() {
       amount: numericAmount,
       category,
       notes: notes.trim(),
+      date: date.trim(),
       createdAt: new Date().toISOString(),
     };
 
@@ -63,6 +70,7 @@ export default function NovoGastoScreen() {
       setAmount("");
       setCategory("Alimentação");
       setNotes("");
+      setDate("");
     } catch {
       Alert.alert("Erro", "Não foi possível salvar o gasto.");
     }
@@ -91,6 +99,16 @@ export default function NovoGastoScreen() {
           keyboardType="numeric"
           value={amount}
           onChangeText={setAmount}
+        />
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Data</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Ex: 18/03/2026"
+          value={date}
+          onChangeText={setDate}
         />
       </View>
 

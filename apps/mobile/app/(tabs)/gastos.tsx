@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import {
@@ -23,6 +24,7 @@ export default function GastosScreen() {
 
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [selectedMonthYear, setSelectedMonthYear] = useState(ALL_MONTHS_VALUE);
+  const [searchText, setSearchText] = useState("");
 
   const loadExpenses = useCallback(async () => {
     const data = await getExpenses();
@@ -61,12 +63,21 @@ export default function GastosScreen() {
   }, [availableMonths]);
 
   const filteredExpenses = useMemo(() => {
-    if (selectedMonthYear === ALL_MONTHS_VALUE) return expenses;
+    const normalizedSearch = searchText.trim().toLowerCase();
 
-    return expenses.filter(
-      (expense) => extractMonthYear(expense.date) === selectedMonthYear
-    );
-  }, [expenses, selectedMonthYear]);
+    return expenses.filter((expense) => {
+      const matchesMonth =
+        selectedMonthYear === ALL_MONTHS_VALUE ||
+        extractMonthYear(expense.date) === selectedMonthYear;
+
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        expense.title.toLowerCase().includes(normalizedSearch) ||
+        expense.category.toLowerCase().includes(normalizedSearch);
+
+      return matchesMonth && matchesSearch;
+    });
+  }, [expenses, selectedMonthYear, searchText]);
 
   async function confirmDeleteExpense(expenseId: string) {
     await deleteExpense(expenseId);
@@ -118,8 +129,19 @@ export default function GastosScreen() {
       <Text style={styles.title}>Gastos</Text>
       <Text style={styles.subtitle}>Lista dos gastos cadastrados</Text>
 
+      <View style={styles.searchContainer}>
+        <Text style={styles.filterLabel}>Buscar por título ou categoria</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Ex: mercado, transporte, lazer..."
+          placeholderTextColor="#9ca3af"
+          value={searchText}
+          onChangeText={setSearchText}
+        />
+      </View>
+
       <View style={styles.filterContainer}>
-        <Text style={styles.filterLabel}>Filtro</Text>
+        <Text style={styles.filterLabel}>Filtro por mês</Text>
 
         <View style={styles.monthButtonsContainer}>
           {monthOptions.length === 1 && availableMonths.length === 0 ? (
@@ -155,7 +177,7 @@ export default function GastosScreen() {
       {filteredExpenses.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateText}>
-            Nenhum gasto encontrado para este filtro.
+            Nenhum gasto encontrado com os filtros atuais.
           </Text>
         </View>
       ) : (
@@ -217,12 +239,25 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     marginBottom: 8,
   },
+  searchContainer: {
+    gap: 10,
+  },
   filterContainer: {
     gap: 10,
   },
   filterLabel: {
     fontSize: 15,
     fontWeight: "600",
+    color: "#111827",
+  },
+  searchInput: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
     color: "#111827",
   },
   monthButtonsContainer: {

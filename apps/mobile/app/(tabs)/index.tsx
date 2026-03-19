@@ -12,6 +12,12 @@ import { extractMonthYear, getAvailableMonthYears } from "../../utils/date";
 
 const ALL_MONTHS_VALUE = "Todos";
 
+type CategorySummaryItem = {
+  category: string;
+  total: number;
+  count: number;
+};
+
 export default function DashboardScreen() {
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [selectedMonthYear, setSelectedMonthYear] = useState(ALL_MONTHS_VALUE);
@@ -86,6 +92,25 @@ export default function DashboardScreen() {
     return sortedCategories[0][0];
   }, [filteredExpenses]);
 
+  const categorySummary = useMemo<CategorySummaryItem[]>(() => {
+    const summaryMap: Record<string, CategorySummaryItem> = {};
+
+    for (const expense of filteredExpenses) {
+      if (!summaryMap[expense.category]) {
+        summaryMap[expense.category] = {
+          category: expense.category,
+          total: 0,
+          count: 0,
+        };
+      }
+
+      summaryMap[expense.category].total += expense.amount;
+      summaryMap[expense.category].count += 1;
+    }
+
+    return Object.values(summaryMap).sort((a, b) => b.total - a.total);
+  }, [filteredExpenses]);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Dashboard</Text>
@@ -157,6 +182,33 @@ export default function DashboardScreen() {
             <Text style={styles.cardValueSmall}>Nenhum gasto</Text>
           )}
         </View>
+      </View>
+
+      <View style={styles.categorySection}>
+        <Text style={styles.sectionTitle}>Resumo por categoria</Text>
+
+        {categorySummary.length === 0 ? (
+          <View style={styles.categoryCard}>
+            <Text style={styles.emptyCategoryText}>
+              Nenhum gasto encontrado para este filtro.
+            </Text>
+          </View>
+        ) : (
+          categorySummary.map((item) => (
+            <View key={item.category} style={styles.categoryCard}>
+              <View style={styles.categoryHeader}>
+                <Text style={styles.categoryName}>{item.category}</Text>
+                <Text style={styles.categoryTotal}>
+                  R$ {item.total.toFixed(2).replace(".", ",")}
+                </Text>
+              </View>
+
+              <Text style={styles.categoryMeta}>
+                {item.count} lançamento{item.count > 1 ? "s" : ""}
+              </Text>
+            </View>
+          ))
+        )}
       </View>
     </ScrollView>
   );
@@ -247,6 +299,47 @@ const styles = StyleSheet.create({
   },
   cardSubValue: {
     fontSize: 15,
+    color: "#6b7280",
+  },
+  categorySection: {
+    gap: 12,
+    marginTop: 8,
+    paddingBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  categoryCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    gap: 6,
+  },
+  categoryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  categoryName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  categoryTotal: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  categoryMeta: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+  emptyCategoryText: {
+    fontSize: 14,
     color: "#6b7280",
   },
 });

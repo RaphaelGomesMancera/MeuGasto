@@ -15,10 +15,14 @@ import {
   ExpenseItem,
   getExpenses,
 } from "../../storage/expense-storage";
-import { extractMonthYear, getAvailableMonthYears } from "../../utils/date";
-
-const ALL_MONTHS_VALUE = "Todos";
-const ALL_CATEGORIES_VALUE = "Todas";
+import {
+  ALL_CATEGORIES_VALUE,
+  ALL_MONTHS_VALUE,
+  filterExpenses,
+  getAvailableExpenseCategories,
+  getAvailableExpenseMonths,
+  getTotalSpent,
+} from "../../utils/expense-helpers";
 
 export default function GastosScreen() {
   const router = useRouter();
@@ -32,9 +36,8 @@ export default function GastosScreen() {
     const data = await getExpenses();
     setExpenses(data);
 
-    const availableMonths = getAvailableMonthYears(
-      data.map((item) => item.date)
-    );
+    const availableMonths = getAvailableExpenseMonths(data);
+    const availableCategories = getAvailableExpenseCategories(data);
 
     if (availableMonths.length === 0) {
       setSelectedMonthYear(ALL_MONTHS_VALUE);
@@ -47,10 +50,6 @@ export default function GastosScreen() {
         return availableMonths[0];
       });
     }
-
-    const availableCategories = Array.from(
-      new Set(data.map((item) => item.category))
-    ).sort((a, b) => a.localeCompare(b, "pt-BR"));
 
     if (availableCategories.length === 0) {
       setSelectedCategory(ALL_CATEGORIES_VALUE);
@@ -75,46 +74,32 @@ export default function GastosScreen() {
   );
 
   const availableMonths = useMemo(() => {
-    return getAvailableMonthYears(expenses.map((expense) => expense.date));
+    return getAvailableExpenseMonths(expenses);
+  }, [expenses]);
+
+  const availableCategories = useMemo(() => {
+    return getAvailableExpenseCategories(expenses);
   }, [expenses]);
 
   const monthOptions = useMemo(() => {
     return [ALL_MONTHS_VALUE, ...availableMonths];
   }, [availableMonths]);
 
-  const availableCategories = useMemo(() => {
-    return Array.from(new Set(expenses.map((expense) => expense.category))).sort(
-      (a, b) => a.localeCompare(b, "pt-BR")
-    );
-  }, [expenses]);
-
   const categoryOptions = useMemo(() => {
     return [ALL_CATEGORIES_VALUE, ...availableCategories];
   }, [availableCategories]);
 
   const filteredExpenses = useMemo(() => {
-    const normalizedSearch = searchText.trim().toLowerCase();
-
-    return expenses.filter((expense) => {
-      const matchesMonth =
-        selectedMonthYear === ALL_MONTHS_VALUE ||
-        extractMonthYear(expense.date) === selectedMonthYear;
-
-      const matchesCategory =
-        selectedCategory === ALL_CATEGORIES_VALUE ||
-        expense.category === selectedCategory;
-
-      const matchesSearch =
-        normalizedSearch.length === 0 ||
-        expense.title.toLowerCase().includes(normalizedSearch) ||
-        expense.category.toLowerCase().includes(normalizedSearch);
-
-      return matchesMonth && matchesCategory && matchesSearch;
+    return filterExpenses({
+      expenses,
+      selectedMonthYear,
+      selectedCategory,
+      searchText,
     });
   }, [expenses, selectedMonthYear, selectedCategory, searchText]);
 
   const filteredTotal = useMemo(() => {
-    return filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    return getTotalSpent(filteredExpenses);
   }, [filteredExpenses]);
 
   async function confirmDeleteExpense(expenseId: string) {

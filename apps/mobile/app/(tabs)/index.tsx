@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -90,7 +91,19 @@ export default function DashboardScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.heroCard}>
         <View style={styles.heroHeader}>
-          <Text style={styles.heroEyebrow}>MeuGasto</Text>
+          <View style={styles.brandRow}>
+            <Image
+              source={require("../../assets/images/logo-meugasto.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+
+            <View style={styles.brandTextBlock}>
+              <Text style={styles.brandName}>MeuGasto</Text>
+              <Text style={styles.brandTag}>controle financeiro pessoal</Text>
+            </View>
+          </View>
+
           <Text style={styles.heroTitle}>Visão geral das suas despesas</Text>
           <Text style={styles.heroSubtitle}>
             Acompanhe seus gastos, categorias e tendências por período.
@@ -271,12 +284,31 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   heroHeader: {
-    gap: 6,
+    gap: 14,
+    alignItems: "flex-start",
   },
-  heroEyebrow: {
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  logo: {
+    width: 150,
+    height: 46,
+  },
+  brandTextBlock: {
+    gap: 2,
+  },
+  brandName: {
     color: "#93c5fd",
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 22,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+  },
+  brandTag: {
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.8,
   },
@@ -290,6 +322,7 @@ const styles = StyleSheet.create({
     color: "#cbd5e1",
     fontSize: 14,
     lineHeight: 20,
+    maxWidth: 620,
   },
   heroTotalBlock: {
     backgroundColor: "#1e293b",

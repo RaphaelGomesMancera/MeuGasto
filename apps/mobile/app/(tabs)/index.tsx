@@ -118,15 +118,33 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Dashboard</Text>
-      <Text style={styles.subtitle}>Resumo dos seus gastos</Text>
+      <View style={styles.heroCard}>
+        <View style={styles.heroHeader}>
+          <Text style={styles.heroEyebrow}>MeuGasto</Text>
+          <Text style={styles.heroTitle}>Visão geral das suas despesas</Text>
+          <Text style={styles.heroSubtitle}>
+            Acompanhe seus gastos, categorias e tendências por período.
+          </Text>
+        </View>
 
-      <View style={styles.filterContainer}>
-        <Text style={styles.filterLabel}>Filtro</Text>
+        <View style={styles.heroTotalBlock}>
+          <Text style={styles.heroTotalLabel}>
+            {selectedMonthYear === ALL_MONTHS_VALUE
+              ? "Total geral"
+              : `Total de ${selectedMonthYear}`}
+          </Text>
+          <Text style={styles.heroTotalValue}>
+            R$ {totalSpent.toFixed(2).replace(".", ",")}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Filtro por período</Text>
 
         <View style={styles.monthButtonsContainer}>
           {monthOptions.length === 1 && availableMonths.length === 0 ? (
-            <Text style={styles.emptyFilterText}>Nenhum mês disponível</Text>
+            <Text style={styles.emptyText}>Nenhum mês disponível</Text>
           ) : (
             monthOptions.map((month) => {
               const isSelected = selectedMonthYear === month;
@@ -155,46 +173,41 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      <View style={styles.cardsContainer}>
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Total gasto</Text>
-          <Text style={styles.cardValue}>
-            R$ {totalSpent.toFixed(2).replace(".", ",")}
-          </Text>
+      <View style={styles.metricsGrid}>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>Quantidade</Text>
+          <Text style={styles.metricValue}>{totalCount}</Text>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Quantidade</Text>
-          <Text style={styles.cardValue}>{totalCount}</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Categoria mais usada</Text>
-          <Text style={styles.cardValueSmall}>{mostUsedCategory}</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Último lançamento</Text>
-          {lastExpense ? (
-            <>
-              <Text style={styles.cardValueSmall}>{lastExpense.title}</Text>
-              <Text style={styles.cardSubValue}>
-                R$ {lastExpense.amount.toFixed(2).replace(".", ",")}
-              </Text>
-              <Text style={styles.cardSubValue}>Data: {lastExpense.date}</Text>
-            </>
-          ) : (
-            <Text style={styles.cardValueSmall}>Nenhum gasto</Text>
-          )}
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>Categoria líder</Text>
+          <Text style={styles.metricValueSmall}>{mostUsedCategory}</Text>
         </View>
       </View>
 
-      <View style={styles.categorySection}>
+      <View style={styles.infoCard}>
+        <Text style={styles.infoCardLabel}>Último lançamento</Text>
+
+        {lastExpense ? (
+          <>
+            <Text style={styles.infoCardTitle}>{lastExpense.title}</Text>
+            <Text style={styles.infoCardAmount}>
+              R$ {lastExpense.amount.toFixed(2).replace(".", ",")}
+            </Text>
+            <Text style={styles.infoCardMeta}>{lastExpense.category}</Text>
+            <Text style={styles.infoCardMeta}>Data: {lastExpense.date}</Text>
+          </>
+        ) : (
+          <Text style={styles.emptyText}>Nenhum gasto cadastrado</Text>
+        )}
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Resumo por categoria</Text>
 
         {categorySummary.length === 0 ? (
-          <View style={styles.categoryCard}>
-            <Text style={styles.emptyCategoryText}>
+          <View style={styles.panelCard}>
+            <Text style={styles.emptyText}>
               Nenhum gasto encontrado para este filtro.
             </Text>
           </View>
@@ -202,31 +215,33 @@ export default function DashboardScreen() {
           categorySummary.map((item) => (
             <View key={item.category} style={styles.categoryCard}>
               <View style={styles.categoryHeader}>
-                <Text style={styles.categoryName}>{item.category}</Text>
+                <View>
+                  <Text style={styles.categoryName}>{item.category}</Text>
+                  <Text style={styles.categoryMeta}>
+                    {item.count} lançamento{item.count > 1 ? "s" : ""}
+                  </Text>
+                </View>
+
                 <Text style={styles.categoryTotal}>
                   R$ {item.total.toFixed(2).replace(".", ",")}
                 </Text>
               </View>
-
-              <Text style={styles.categoryMeta}>
-                {item.count} lançamento{item.count > 1 ? "s" : ""}
-              </Text>
             </View>
           ))
         )}
       </View>
 
-      <View style={styles.chartSection}>
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Gráfico por categoria</Text>
 
         {categorySummary.length === 0 ? (
-          <View style={styles.chartCard}>
-            <Text style={styles.emptyCategoryText}>
+          <View style={styles.panelCard}>
+            <Text style={styles.emptyText}>
               Nenhum dado para exibir no gráfico.
             </Text>
           </View>
         ) : (
-          <View style={styles.chartCard}>
+          <View style={styles.panelCard}>
             {categorySummary.map((item) => {
               const widthPercentage =
                 highestCategoryTotal > 0
@@ -267,30 +282,75 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "#eef2f7",
   },
   content: {
-    padding: 24,
-    gap: 16,
+    padding: 20,
+    gap: 18,
+    paddingBottom: 32,
   },
-  title: {
-    fontSize: 28,
+  heroCard: {
+    backgroundColor: "#0f172a",
+    borderRadius: 24,
+    padding: 22,
+    gap: 18,
+    shadowColor: "#0f172a",
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
+  },
+  heroHeader: {
+    gap: 6,
+  },
+  heroEyebrow: {
+    color: "#93c5fd",
+    fontSize: 13,
     fontWeight: "700",
-    color: "#111827",
-    marginTop: 12,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
-  subtitle: {
-    fontSize: 16,
-    color: "#6b7280",
-    marginBottom: 8,
+  heroTitle: {
+    color: "#ffffff",
+    fontSize: 28,
+    fontWeight: "800",
+    lineHeight: 34,
   },
-  filterContainer: {
-    gap: 10,
+  heroSubtitle: {
+    color: "#cbd5e1",
+    fontSize: 14,
+    lineHeight: 20,
   },
-  filterLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#111827",
+  heroTotalBlock: {
+    backgroundColor: "#1e293b",
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  heroTotalLabel: {
+    color: "#93c5fd",
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  heroTotalValue: {
+    color: "#ffffff",
+    fontSize: 32,
+    fontWeight: "800",
+  },
+  section: {
+    gap: 12,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#0f172a",
   },
   monthButtonsContainer: {
     flexDirection: "row",
@@ -298,109 +358,126 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   monthButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
     borderRadius: 999,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: "#dbe3ee",
   },
   monthButtonSelected: {
-    backgroundColor: "#111827",
-    borderColor: "#111827",
+    backgroundColor: "#2563eb",
+    borderColor: "#2563eb",
   },
   monthButtonText: {
-    color: "#111827",
+    color: "#0f172a",
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "700",
   },
   monthButtonTextSelected: {
     color: "#ffffff",
   },
-  emptyFilterText: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-  cardsContainer: {
+  metricsGrid: {
+    flexDirection: "row",
     gap: 14,
   },
-  card: {
+  metricCard: {
+    flex: 1,
     backgroundColor: "#ffffff",
-    borderRadius: 14,
+    borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    gap: 8,
+    borderColor: "#e2e8f0",
+    shadowColor: "#0f172a",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+    gap: 10,
   },
-  cardLabel: {
-    fontSize: 14,
-    color: "#6b7280",
-    fontWeight: "600",
-  },
-  cardValue: {
-    fontSize: 28,
+  metricLabel: {
+    color: "#64748b",
+    fontSize: 13,
     fontWeight: "700",
-    color: "#111827",
   },
-  cardValueSmall: {
-    fontSize: 20,
+  metricValue: {
+    color: "#0f172a",
+    fontSize: 30,
+    fontWeight: "800",
+  },
+  metricValueSmall: {
+    color: "#0f172a",
+    fontSize: 22,
+    fontWeight: "800",
+  },
+  infoCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    shadowColor: "#0f172a",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+    gap: 6,
+  },
+  infoCardLabel: {
+    color: "#64748b",
+    fontSize: 13,
     fontWeight: "700",
-    color: "#111827",
+    marginBottom: 4,
   },
-  cardSubValue: {
-    fontSize: 15,
-    color: "#6b7280",
+  infoCardTitle: {
+    color: "#0f172a",
+    fontSize: 24,
+    fontWeight: "800",
   },
-  categorySection: {
-    gap: 12,
-    marginTop: 8,
-  },
-  sectionTitle: {
+  infoCardAmount: {
+    color: "#2563eb",
     fontSize: 18,
-    fontWeight: "700",
-    color: "#111827",
+    fontWeight: "800",
+  },
+  infoCardMeta: {
+    color: "#64748b",
+    fontSize: 14,
+    fontWeight: "500",
   },
   categoryCard: {
     backgroundColor: "#ffffff",
-    borderRadius: 14,
+    borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    gap: 6,
+    borderColor: "#e2e8f0",
   },
   categoryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 12,
   },
   categoryName: {
+    color: "#0f172a",
     fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  categoryTotal: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
+    fontWeight: "800",
   },
   categoryMeta: {
-    fontSize: 14,
-    color: "#6b7280",
+    color: "#64748b",
+    fontSize: 13,
+    marginTop: 4,
   },
-  emptyCategoryText: {
-    fontSize: 14,
-    color: "#6b7280",
+  categoryTotal: {
+    color: "#0f172a",
+    fontSize: 16,
+    fontWeight: "800",
   },
-  chartSection: {
-    gap: 12,
-    paddingBottom: 24,
-  },
-  chartCard: {
+  panelCard: {
     backgroundColor: "#ffffff",
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: 20,
+    padding: 18,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#e2e8f0",
     gap: 16,
   },
   chartItem: {
@@ -413,30 +490,34 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   chartLabel: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111827",
     flex: 1,
+    color: "#0f172a",
+    fontSize: 15,
+    fontWeight: "800",
   },
   chartValue: {
+    color: "#0f172a",
     fontSize: 14,
-    fontWeight: "700",
-    color: "#111827",
+    fontWeight: "800",
   },
   chartBarBackground: {
     width: "100%",
     height: 12,
-    backgroundColor: "#e5e7eb",
+    backgroundColor: "#dbeafe",
     borderRadius: 999,
     overflow: "hidden",
   },
   chartBarFill: {
     height: "100%",
-    backgroundColor: "#111827",
+    backgroundColor: "#2563eb",
     borderRadius: 999,
   },
   chartMeta: {
+    color: "#64748b",
     fontSize: 13,
-    color: "#6b7280",
+  },
+  emptyText: {
+    color: "#64748b",
+    fontSize: 14,
   },
 });

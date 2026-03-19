@@ -18,12 +18,14 @@ import {
 import { extractMonthYear, getAvailableMonthYears } from "../../utils/date";
 
 const ALL_MONTHS_VALUE = "Todos";
+const ALL_CATEGORIES_VALUE = "Todas";
 
 export default function GastosScreen() {
   const router = useRouter();
 
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [selectedMonthYear, setSelectedMonthYear] = useState(ALL_MONTHS_VALUE);
+  const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES_VALUE);
   const [searchText, setSearchText] = useState("");
 
   const loadExpenses = useCallback(async () => {
@@ -36,16 +38,34 @@ export default function GastosScreen() {
 
     if (availableMonths.length === 0) {
       setSelectedMonthYear(ALL_MONTHS_VALUE);
-      return;
+    } else {
+      setSelectedMonthYear((current) => {
+        if (current === ALL_MONTHS_VALUE || availableMonths.includes(current)) {
+          return current;
+        }
+
+        return availableMonths[0];
+      });
     }
 
-    setSelectedMonthYear((current) => {
-      if (current === ALL_MONTHS_VALUE || availableMonths.includes(current)) {
-        return current;
-      }
+    const availableCategories = Array.from(
+      new Set(data.map((item) => item.category))
+    ).sort((a, b) => a.localeCompare(b, "pt-BR"));
 
-      return availableMonths[0];
-    });
+    if (availableCategories.length === 0) {
+      setSelectedCategory(ALL_CATEGORIES_VALUE);
+    } else {
+      setSelectedCategory((current) => {
+        if (
+          current === ALL_CATEGORIES_VALUE ||
+          availableCategories.includes(current)
+        ) {
+          return current;
+        }
+
+        return ALL_CATEGORIES_VALUE;
+      });
+    }
   }, []);
 
   useFocusEffect(
@@ -62,6 +82,16 @@ export default function GastosScreen() {
     return [ALL_MONTHS_VALUE, ...availableMonths];
   }, [availableMonths]);
 
+  const availableCategories = useMemo(() => {
+    return Array.from(new Set(expenses.map((expense) => expense.category))).sort(
+      (a, b) => a.localeCompare(b, "pt-BR")
+    );
+  }, [expenses]);
+
+  const categoryOptions = useMemo(() => {
+    return [ALL_CATEGORIES_VALUE, ...availableCategories];
+  }, [availableCategories]);
+
   const filteredExpenses = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase();
 
@@ -70,14 +100,22 @@ export default function GastosScreen() {
         selectedMonthYear === ALL_MONTHS_VALUE ||
         extractMonthYear(expense.date) === selectedMonthYear;
 
+      const matchesCategory =
+        selectedCategory === ALL_CATEGORIES_VALUE ||
+        expense.category === selectedCategory;
+
       const matchesSearch =
         normalizedSearch.length === 0 ||
         expense.title.toLowerCase().includes(normalizedSearch) ||
         expense.category.toLowerCase().includes(normalizedSearch);
 
-      return matchesMonth && matchesSearch;
+      return matchesMonth && matchesCategory && matchesSearch;
     });
-  }, [expenses, selectedMonthYear, searchText]);
+  }, [expenses, selectedMonthYear, selectedCategory, searchText]);
+
+  const filteredTotal = useMemo(() => {
+    return filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  }, [filteredExpenses]);
 
   async function confirmDeleteExpense(expenseId: string) {
     await deleteExpense(expenseId);
@@ -127,6 +165,22 @@ export default function GastosScreen() {
         </Text>
       </View>
 
+      <View style={styles.summaryCard}>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryLabel}>Itens filtrados</Text>
+          <Text style={styles.summaryValue}>{filteredExpenses.length}</Text>
+        </View>
+
+        <View style={styles.summaryDivider} />
+
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryLabel}>Total filtrado</Text>
+          <Text style={styles.summaryValueMoney}>
+            R$ {filteredTotal.toFixed(2).replace(".", ",")}
+          </Text>
+        </View>
+      </View>
+
       <View style={styles.searchCard}>
         <Text style={styles.fieldLabel}>Buscar por título ou categoria</Text>
         <TextInput
@@ -141,7 +195,7 @@ export default function GastosScreen() {
       <View style={styles.filterSection}>
         <Text style={styles.fieldLabel}>Filtro por mês</Text>
 
-        <View style={styles.monthButtonsContainer}>
+        <View style={styles.filterButtonsContainer}>
           {monthOptions.length === 1 && availableMonths.length === 0 ? (
             <Text style={styles.emptyText}>Nenhum mês disponível</Text>
           ) : (
@@ -152,18 +206,52 @@ export default function GastosScreen() {
                 <Pressable
                   key={month}
                   style={[
-                    styles.monthButton,
-                    isSelected && styles.monthButtonSelected,
+                    styles.filterButton,
+                    isSelected && styles.filterButtonSelected,
                   ]}
                   onPress={() => setSelectedMonthYear(month)}
                 >
                   <Text
                     style={[
-                      styles.monthButtonText,
-                      isSelected && styles.monthButtonTextSelected,
+                      styles.filterButtonText,
+                      isSelected && styles.filterButtonTextSelected,
                     ]}
                   >
                     {month}
+                  </Text>
+                </Pressable>
+              );
+            })
+          )}
+        </View>
+      </View>
+
+      <View style={styles.filterSection}>
+        <Text style={styles.fieldLabel}>Filtro por categoria</Text>
+
+        <View style={styles.filterButtonsContainer}>
+          {categoryOptions.length === 1 && availableCategories.length === 0 ? (
+            <Text style={styles.emptyText}>Nenhuma categoria disponível</Text>
+          ) : (
+            categoryOptions.map((category) => {
+              const isSelected = selectedCategory === category;
+
+              return (
+                <Pressable
+                  key={category}
+                  style={[
+                    styles.filterButton,
+                    isSelected && styles.filterButtonSelected,
+                  ]}
+                  onPress={() => setSelectedCategory(category)}
+                >
+                  <Text
+                    style={[
+                      styles.filterButtonText,
+                      isSelected && styles.filterButtonTextSelected,
+                    ]}
+                  >
+                    {category}
                   </Text>
                 </Pressable>
               );
@@ -183,7 +271,7 @@ export default function GastosScreen() {
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateTitle}>Nada encontrado</Text>
           <Text style={styles.emptyText}>
-            Ajuste a busca ou o filtro para encontrar seus gastos.
+            Ajuste a busca ou os filtros para encontrar seus gastos.
           </Text>
         </View>
       ) : (
@@ -271,6 +359,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  summaryCard: {
+    backgroundColor: "#0f172a",
+    borderRadius: 20,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+  },
+  summaryItem: {
+    flex: 1,
+    gap: 6,
+  },
+  summaryDivider: {
+    width: 1,
+    alignSelf: "stretch",
+    backgroundColor: "#334155",
+  },
+  summaryLabel: {
+    color: "#93c5fd",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  summaryValue: {
+    color: "#ffffff",
+    fontSize: 28,
+    fontWeight: "800",
+  },
+  summaryValueMoney: {
+    color: "#ffffff",
+    fontSize: 22,
+    fontWeight: "800",
+  },
   searchCard: {
     backgroundColor: "#ffffff",
     borderRadius: 20,
@@ -297,12 +418,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#0f172a",
   },
-  monthButtonsContainer: {
+  filterButtonsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
   },
-  monthButton: {
+  filterButton: {
     paddingHorizontal: 16,
     paddingVertical: 11,
     borderRadius: 999,
@@ -310,16 +431,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#dbe3ee",
   },
-  monthButtonSelected: {
+  filterButtonSelected: {
     backgroundColor: "#2563eb",
     borderColor: "#2563eb",
   },
-  monthButtonText: {
+  filterButtonText: {
     color: "#0f172a",
     fontSize: 14,
     fontWeight: "700",
   },
-  monthButtonTextSelected: {
+  filterButtonTextSelected: {
     color: "#ffffff",
   },
   resultsHeader: {

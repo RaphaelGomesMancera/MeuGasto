@@ -111,6 +111,11 @@ export default function DashboardScreen() {
     return Object.values(summaryMap).sort((a, b) => b.total - a.total);
   }, [filteredExpenses]);
 
+  const highestCategoryTotal = useMemo(() => {
+    if (categorySummary.length === 0) return 0;
+    return categorySummary[0].total;
+  }, [categorySummary]);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Dashboard</Text>
@@ -210,6 +215,51 @@ export default function DashboardScreen() {
           ))
         )}
       </View>
+
+      <View style={styles.chartSection}>
+        <Text style={styles.sectionTitle}>Gráfico por categoria</Text>
+
+        {categorySummary.length === 0 ? (
+          <View style={styles.chartCard}>
+            <Text style={styles.emptyCategoryText}>
+              Nenhum dado para exibir no gráfico.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.chartCard}>
+            {categorySummary.map((item) => {
+              const widthPercentage =
+                highestCategoryTotal > 0
+                  ? (item.total / highestCategoryTotal) * 100
+                  : 0;
+
+              return (
+                <View key={item.category} style={styles.chartItem}>
+                  <View style={styles.chartItemHeader}>
+                    <Text style={styles.chartLabel}>{item.category}</Text>
+                    <Text style={styles.chartValue}>
+                      R$ {item.total.toFixed(2).replace(".", ",")}
+                    </Text>
+                  </View>
+
+                  <View style={styles.chartBarBackground}>
+                    <View
+                      style={[
+                        styles.chartBarFill,
+                        { width: `${Math.max(widthPercentage, 6)}%` },
+                      ]}
+                    />
+                  </View>
+
+                  <Text style={styles.chartMeta}>
+                    {item.count} lançamento{item.count > 1 ? "s" : ""}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -304,7 +354,6 @@ const styles = StyleSheet.create({
   categorySection: {
     gap: 12,
     marginTop: 8,
-    paddingBottom: 24,
   },
   sectionTitle: {
     fontSize: 18,
@@ -340,6 +389,54 @@ const styles = StyleSheet.create({
   },
   emptyCategoryText: {
     fontSize: 14,
+    color: "#6b7280",
+  },
+  chartSection: {
+    gap: 12,
+    paddingBottom: 24,
+  },
+  chartCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    gap: 16,
+  },
+  chartItem: {
+    gap: 8,
+  },
+  chartItemHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+  chartLabel: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
+    flex: 1,
+  },
+  chartValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  chartBarBackground: {
+    width: "100%",
+    height: 12,
+    backgroundColor: "#e5e7eb",
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+  chartBarFill: {
+    height: "100%",
+    backgroundColor: "#111827",
+    borderRadius: 999,
+  },
+  chartMeta: {
+    fontSize: 13,
     color: "#6b7280",
   },
 });

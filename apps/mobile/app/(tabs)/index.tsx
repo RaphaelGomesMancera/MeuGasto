@@ -8,15 +8,15 @@ import {
   View,
 } from "react-native";
 import { ExpenseItem, getExpenses } from "../../storage/expense-storage";
-import { extractMonthYear, getAvailableMonthYears } from "../../utils/date";
-
-const ALL_MONTHS_VALUE = "Todos";
-
-type CategorySummaryItem = {
-  category: string;
-  total: number;
-  count: number;
-};
+import {
+  ALL_MONTHS_VALUE,
+  CategorySummaryItem,
+  filterExpenses,
+  getAvailableExpenseMonths,
+  getCategorySummary,
+  getMostUsedCategory,
+  getTotalSpent,
+} from "../../utils/expense-helpers";
 
 export default function DashboardScreen() {
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
@@ -28,9 +28,7 @@ export default function DashboardScreen() {
         const data = await getExpenses();
         setExpenses(data);
 
-        const availableMonths = getAvailableMonthYears(
-          data.map((item) => item.date)
-        );
+        const availableMonths = getAvailableExpenseMonths(data);
 
         if (availableMonths.length === 0) {
           setSelectedMonthYear(ALL_MONTHS_VALUE);
@@ -54,7 +52,7 @@ export default function DashboardScreen() {
   );
 
   const availableMonths = useMemo(() => {
-    return getAvailableMonthYears(expenses.map((expense) => expense.date));
+    return getAvailableExpenseMonths(expenses);
   }, [expenses]);
 
   const monthOptions = useMemo(() => {
@@ -62,53 +60,25 @@ export default function DashboardScreen() {
   }, [availableMonths]);
 
   const filteredExpenses = useMemo(() => {
-    if (selectedMonthYear === ALL_MONTHS_VALUE) return expenses;
-
-    return expenses.filter(
-      (expense) => extractMonthYear(expense.date) === selectedMonthYear
-    );
+    return filterExpenses({
+      expenses,
+      selectedMonthYear,
+    });
   }, [expenses, selectedMonthYear]);
 
   const totalSpent = useMemo(() => {
-    return filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    return getTotalSpent(filteredExpenses);
   }, [filteredExpenses]);
 
   const totalCount = filteredExpenses.length;
   const lastExpense = filteredExpenses[0] ?? null;
 
   const mostUsedCategory = useMemo(() => {
-    if (filteredExpenses.length === 0) return "Nenhuma";
-
-    const categoryMap: Record<string, number> = {};
-
-    for (const expense of filteredExpenses) {
-      categoryMap[expense.category] = (categoryMap[expense.category] || 0) + 1;
-    }
-
-    const sortedCategories = Object.entries(categoryMap).sort(
-      (a, b) => b[1] - a[1]
-    );
-
-    return sortedCategories[0][0];
+    return getMostUsedCategory(filteredExpenses);
   }, [filteredExpenses]);
 
   const categorySummary = useMemo<CategorySummaryItem[]>(() => {
-    const summaryMap: Record<string, CategorySummaryItem> = {};
-
-    for (const expense of filteredExpenses) {
-      if (!summaryMap[expense.category]) {
-        summaryMap[expense.category] = {
-          category: expense.category,
-          total: 0,
-          count: 0,
-        };
-      }
-
-      summaryMap[expense.category].total += expense.amount;
-      summaryMap[expense.category].count += 1;
-    }
-
-    return Object.values(summaryMap).sort((a, b) => b.total - a.total);
+    return getCategorySummary(filteredExpenses);
   }, [filteredExpenses]);
 
   const highestCategoryTotal = useMemo(() => {

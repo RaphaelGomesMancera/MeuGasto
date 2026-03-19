@@ -1,6 +1,8 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
+  Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,27 +16,34 @@ import {
 } from "../../storage/expense-storage";
 import { extractMonthYear, getAvailableMonthYears } from "../../utils/date";
 
+const ALL_MONTHS_VALUE = "Todos";
+
 export default function GastosScreen() {
   const router = useRouter();
 
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [selectedMonthYear, setSelectedMonthYear] = useState("");
+  const [selectedMonthYear, setSelectedMonthYear] = useState(ALL_MONTHS_VALUE);
 
   const loadExpenses = useCallback(async () => {
     const data = await getExpenses();
     setExpenses(data);
 
-    if (data.length > 0) {
-      const availableMonths = getAvailableMonthYears(
-        data.map((item) => item.date)
-      );
+    const availableMonths = getAvailableMonthYears(
+      data.map((item) => item.date)
+    );
 
-      if (availableMonths.length > 0) {
-        setSelectedMonthYear((current) => current || availableMonths[0]);
-      }
-    } else {
-      setSelectedMonthYear("");
+    if (availableMonths.length === 0) {
+      setSelectedMonthYear(ALL_MONTHS_VALUE);
+      return;
     }
+
+    setSelectedMonthYear((current) => {
+      if (current === ALL_MONTHS_VALUE || availableMonths.includes(current)) {
+        return current;
+      }
+
+      return availableMonths[0];
+    });
   }, []);
 
   useFocusEffect(
@@ -47,25 +56,54 @@ export default function GastosScreen() {
     return getAvailableMonthYears(expenses.map((expense) => expense.date));
   }, [expenses]);
 
+  const monthOptions = useMemo(() => {
+    return [ALL_MONTHS_VALUE, ...availableMonths];
+  }, [availableMonths]);
+
   const filteredExpenses = useMemo(() => {
-    if (!selectedMonthYear) return expenses;
+    if (selectedMonthYear === ALL_MONTHS_VALUE) return expenses;
 
     return expenses.filter(
       (expense) => extractMonthYear(expense.date) === selectedMonthYear
     );
   }, [expenses, selectedMonthYear]);
 
-  async function handleDeleteExpense(expenseId: string) {
-    const confirmed = window.confirm(
-      "Tem certeza que deseja excluir este gasto?"
-    );
+  async function confirmDeleteExpense(expenseId: string) {
+    await deleteExpense(expenseId);
+    await loadExpenses();
+  }
 
-    if (!confirmed) {
+  function handleDeleteExpense(expenseId: string) {
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(
+        "Tem certeza que deseja excluir este gasto?"
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      confirmDeleteExpense(expenseId);
       return;
     }
 
-    await deleteExpense(expenseId);
-    await loadExpenses();
+    Alert.alert(
+      "Excluir gasto",
+      "Tem certeza que deseja excluir este gasto?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: () => {
+            confirmDeleteExpense(expenseId);
+          },
+        },
+      ]
+    );
   }
 
   function handleEditExpense(expenseId: string) {
@@ -81,13 +119,13 @@ export default function GastosScreen() {
       <Text style={styles.subtitle}>Lista dos gastos cadastrados</Text>
 
       <View style={styles.filterContainer}>
-        <Text style={styles.filterLabel}>Mês selecionado</Text>
+        <Text style={styles.filterLabel}>Filtro</Text>
 
         <View style={styles.monthButtonsContainer}>
-          {availableMonths.length === 0 ? (
+          {monthOptions.length === 1 && availableMonths.length === 0 ? (
             <Text style={styles.emptyFilterText}>Nenhum mês disponível</Text>
           ) : (
-            availableMonths.map((month) => {
+            monthOptions.map((month) => {
               const isSelected = selectedMonthYear === month;
 
               return (
@@ -117,7 +155,7 @@ export default function GastosScreen() {
       {filteredExpenses.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateText}>
-            Nenhum gasto cadastrado para este mês.
+            Nenhum gasto encontrado para este filtro.
           </Text>
         </View>
       ) : (

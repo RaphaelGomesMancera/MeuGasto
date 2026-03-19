@@ -10,9 +10,11 @@ import {
 import { ExpenseItem, getExpenses } from "../../storage/expense-storage";
 import { extractMonthYear, getAvailableMonthYears } from "../../utils/date";
 
+const ALL_MONTHS_VALUE = "Todos";
+
 export default function DashboardScreen() {
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [selectedMonthYear, setSelectedMonthYear] = useState("");
+  const [selectedMonthYear, setSelectedMonthYear] = useState(ALL_MONTHS_VALUE);
 
   useFocusEffect(
     useCallback(() => {
@@ -20,13 +22,25 @@ export default function DashboardScreen() {
         const data = await getExpenses();
         setExpenses(data);
 
-        if (data.length > 0) {
-          const availableMonths = getAvailableMonthYears(data.map((item) => item.date));
+        const availableMonths = getAvailableMonthYears(
+          data.map((item) => item.date)
+        );
 
-          if (availableMonths.length > 0) {
-            setSelectedMonthYear((current) => current || availableMonths[0]);
-          }
+        if (availableMonths.length === 0) {
+          setSelectedMonthYear(ALL_MONTHS_VALUE);
+          return;
         }
+
+        setSelectedMonthYear((current) => {
+          if (
+            current === ALL_MONTHS_VALUE ||
+            availableMonths.includes(current)
+          ) {
+            return current;
+          }
+
+          return availableMonths[0];
+        });
       }
 
       loadExpenses();
@@ -37,8 +51,12 @@ export default function DashboardScreen() {
     return getAvailableMonthYears(expenses.map((expense) => expense.date));
   }, [expenses]);
 
+  const monthOptions = useMemo(() => {
+    return [ALL_MONTHS_VALUE, ...availableMonths];
+  }, [availableMonths]);
+
   const filteredExpenses = useMemo(() => {
-    if (!selectedMonthYear) return expenses;
+    if (selectedMonthYear === ALL_MONTHS_VALUE) return expenses;
 
     return expenses.filter(
       (expense) => extractMonthYear(expense.date) === selectedMonthYear
@@ -61,7 +79,9 @@ export default function DashboardScreen() {
       categoryMap[expense.category] = (categoryMap[expense.category] || 0) + 1;
     }
 
-    const sortedCategories = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]);
+    const sortedCategories = Object.entries(categoryMap).sort(
+      (a, b) => b[1] - a[1]
+    );
 
     return sortedCategories[0][0];
   }, [filteredExpenses]);
@@ -72,13 +92,13 @@ export default function DashboardScreen() {
       <Text style={styles.subtitle}>Resumo dos seus gastos</Text>
 
       <View style={styles.filterContainer}>
-        <Text style={styles.filterLabel}>Mês selecionado</Text>
+        <Text style={styles.filterLabel}>Filtro</Text>
 
         <View style={styles.monthButtonsContainer}>
-          {availableMonths.length === 0 ? (
+          {monthOptions.length === 1 && availableMonths.length === 0 ? (
             <Text style={styles.emptyFilterText}>Nenhum mês disponível</Text>
           ) : (
-            availableMonths.map((month) => {
+            monthOptions.map((month) => {
               const isSelected = selectedMonthYear === month;
 
               return (
